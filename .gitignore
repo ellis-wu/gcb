@@ -15,4 +15,3 @@ build/
 dev/var/
 var/
 dist/
-test.py
