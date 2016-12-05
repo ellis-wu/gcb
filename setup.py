@@ -6,6 +6,9 @@ if sys.version_info <= (2, 7):
     print(error)
     sys.exit(1)
 
+with open('LICENSE') as f:
+    license_file = f.read()
+
 requirements = [
     'google-api-python-client>=1.5.5',
 ]
@@ -19,5 +22,5 @@ setup(
     author_email='kyle.b@inwinstack.com, ellis.w@inwinstack.com',
     url='https://github.com/kairen/gcb',
     install_requires=requirements,
-    license="MIT",
+    license=license_file,
     entry_points={})
