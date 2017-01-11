@@ -8,4 +8,4 @@ def gcp_credential(api):
         service = discovery.build(api, 'v1', credentials=credentials)
         return service
     except:
-        sys.exit("Promise Undefined.")
+        sys.exit("[GCP] Promise Undefined.")

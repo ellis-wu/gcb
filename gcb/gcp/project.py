@@ -1,39 +1,23 @@
-import json
-import sys
 import credential
 
 
 def list():
-    try:
-        request = credential.gcp_credential('cloudresourcemanager')
-        response = request.projects().list().execute()
-        encodedjson = json.dumps(response['projects'], sort_keys=True, indent=4)
-        print encodedjson
-    except:
-        sys.exit("get project list fail.")
+    request = credential.gcp_credential('cloudresourcemanager').projects()
+    response = request.list().execute()
+    print response
 
 
 def create(project_name, project_id):
-    try:
-        config = {
-            'project_id': project_id,
-            'name': project_name
-        }
-        request = credential.gcp_credential('cloudresourcemanager')
-        response = request.projects().create(body=config).execute()
-        print("create [%s] project success" % project_name)
-        encodedjson = json.dumps(response, sort_keys=True, indent=4)
-        print encodedjson
-    except:
-        sys.exit("create project fail.")
+    config = {
+        'project_id': project_id,
+        'name': project_name
+     }
+    request = credential.gcp_credential('cloudresourcemanager').projects()
+    response = request.create(body=config).execute()
+    print response
 
 
 def delete(project_id):
-    try:
-        request = credential.gcp_credential('cloudresourcemanager').projects()
-        response = request.delete(projectId=project_id).execute()
-        print("delete [%s] success" % project_id)
-        encodedjson = json.dumps(response, sort_keys=True, indent=4)
-        print encodedjson
-    except:
-        sys.exit("delete prject fail")
+    request = credential.gcp_credential('cloudresourcemanager').projects()
+    response = request.delete(projectId=project_id).execute()
+    print response

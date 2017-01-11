@@ -1,38 +1,26 @@
-import json, sys
 import credential
+import magic
+from googleapiclient import http
 
 
-def list():
-    try:
-        request = credential.gcp_credential('cloudresourcemanager')
-        response = request.projects().list().execute()
-        encodedjson = json.dumps(response['projects'], sort_keys=True, indent=4)
-        print encodedjson
-    except:
-        sys.exit("get project list fail.")
+def list(bucket_name):
+    request = credential.gcp_credential('storage').objects()
+    response = request.list(bucket=bucket_name).execute()
+    return response
 
 
-def create(project_name, project_id):
-    try:
-        config = {
-            'project_id': project_id,
-            'name': project_name
-        }
-        request = credential.gcp_credential('cloudresourcemanager')
-        response = request.projects().create(body=config).execute()
-        print("create [%s] project success" % project_name)
-        encodedjson = json.dumps(response, sort_keys=True, indent=4)
-        print encodedjson
-    except:
-        sys.exit("create project fail.")
+def upload(bucket_name, file_path, file_name):
+    body = {
+        'name': file_name,
+    }
+    mime = magic.Magic(mime=True)
+    fileType = mime.from_file(file_path)
+    with open(file_path, 'rb') as f:
+        request = credential.gcp_credential('storage').objects()
+        response = request.insert(bucket=bucket_name, body=body, media_body=http.MediaIoBaseUpload(f, fileType)).execute()
+    return response
 
 
-def delete(project_id):
-    try:
-        request = credential.gcp_credential('cloudresourcemanager').projects()
-        response = request.delete(projectId=project_id).execute()
-        print("delete [%s] success" % project_id)
-        encodedjson = json.dumps(response, sort_keys=True, indent=4)
-        print encodedjson
-    except:
-        sys.exit("delete prject fail")
+def delete(bucket_name, object_name):
+    request = credential.gcp_credential('storage').objects()
+    request.delete(bucket=bucket_name, object=object_name).execute()
