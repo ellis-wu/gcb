@@ -11,17 +11,39 @@ from cli.ceph import bucket as clicephbucket
 from cli.ceph import object as clicephobject
 
 
+def progress(count, total):
+    bar_len = 60
+    filled_len = int(round(bar_len * count / float(total)))
+    percents = round(100.0 * count / float(total), 1)
+    bar = '#' * filled_len + ' ' * (bar_len - filled_len)
+    sys.stdout.write('[%s] %s%s ... %s/%s\r' % (bar, percents, '%', count, total))
+    sys.stdout.flush()
+    if count == total:
+        print '\n[GCB] Backup finish'
+
+
 def bucket_backup(ceph_bucket, gcp_project, gcp_bucket):
     cephbuckets = cephbucket.list()
     if bool([(bucket.name) for bucket in cephbuckets if ceph_bucket == bucket.name]):
         gcpbuckets = gcpbucket.list(gcp_project)
         if 'items' in gcpbuckets.keys():
             if bool([(value['name']) for value in gcpbuckets['items'] if gcp_bucket == value['name']]):
-                for key in cephobject.list(ceph_bucket):
+                ceph_objects = cephobject.list(ceph_bucket)
+                # objects_count = sum(1 for key in ceph_objects)
+                # index = 1
+                for key in ceph_objects:
                     cephobject.download(ceph_bucket, key.name)
-                    gcpobject.upload(gcp_bucket, key.name, key.name)
-                    print "%s backup finish ..." % key.name
+                    gcp_object = gcpobject.upload(gcp_bucket, key.name, key.name)
+                    done = None
+                    while done is None:
+                        status, done = gcp_object.next_chunk()
+                        if status:
+                            sys.stdout.write("Uploaded %d%%.\r" % int(status.progress() * 100))
+                            sys.stdout.flush()
                     os.remove(key.name)
+                    print "%s upload complete" % key.name
+                    # progress(index, objects_count)
+                    # index += 1
             else:
                 print "[GCB] %s not in your GCP" % gcp_bucket
     else:

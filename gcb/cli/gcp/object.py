@@ -7,7 +7,7 @@ from gcp import object as gcpobject
 def list(bucket_name):
     try:
         gcp_object_list = gcpobject.list(bucket_name)
-        print "{name:<30} \t {size:<10} \t {type:<15} \t {modified:<25}".format(
+        print "{name:<30} \t {size:<10} \t {type:<25} \t {modified:<25}".format(
             name='OBJECT NAME',
             size='SIZE',
             type='TYPE',
@@ -15,7 +15,7 @@ def list(bucket_name):
         )
         if 'items' in gcp_object_list.keys():
             for value in gcp_object_list['items']:
-                print "{name:<30} \t {size:<10} \t {type:<15} \t {modified:<25}".format(
+                print "{name:<30} \t {size:<10} \t {type:<25} \t {modified:<25}".format(
                     name=value['name'],
                     size=value['size'],
                     type=value['contentType'],
@@ -30,7 +30,13 @@ def list(bucket_name):
 def upload(bucket_name, file_path, file_name):
     try:
         gcp_object_upload = gcpobject.upload(bucket_name, file_path, file_name)
-        print "[GCP] UPLOAD %s SUCCESS !" % gcp_object_upload['name']
+        done = None
+        while done is None:
+            status, done = gcp_object_upload.next_chunk()
+            if status:
+                sys.stdout.write("Uploaded %d%%.\r" % int(status.progress() * 100))
+                sys.stdout.flush()
+        print "[GCP] UPLOAD %s SUCCESS !" % file_name
     except errors.HttpError, e:
         print "[ERROR] GCP object upload fail, %s" % json.loads(e.content)['error']['message']
 

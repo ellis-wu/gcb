@@ -82,7 +82,7 @@ def object_cli():
         elif sys.argv[3] == 'upload':
             if len(sys.argv) != 7:
                 message_alert(
-                    "Usage: gcb ceph object upload [bucket_name] [file_name]",
+                    "Usage: gcb ceph object upload [bucket_name] [file_path] [file_name]",
                     none="none"
                 )
             else:
@@ -90,7 +90,7 @@ def object_cli():
         elif sys.argv[3] == 'delete':
             if len(sys.argv) != 6:
                 message_alert(
-                    "Usage: gcb ceph object delete [bucket_name] [file_path] [file_name]",
+                    "Usage: gcb ceph object delete [bucket_name] [file_name]",
                     none="none"
                 )
             else:

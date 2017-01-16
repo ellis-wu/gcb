@@ -15,10 +15,17 @@ def upload(bucket_name, file_path, file_name):
     }
     mime = magic.Magic(mime=True)
     fileType = mime.from_file(file_path)
+    chunk_size = 5 * 1024 * 1024
     with open(file_path, 'rb') as f:
+        media = http.MediaFileUpload(file_path,
+                                     mimetype=fileType,
+                                     chunksize=chunk_size,
+                                     resumable=True)
         request = credential.gcp_credential('storage').objects()
-        response = request.insert(bucket=bucket_name, body=body, media_body=http.MediaIoBaseUpload(f, fileType)).execute()
-    return response
+        response = request.insert(bucket=bucket_name,
+                                  body=body,
+                                  media_body=media)
+        return response
 
 
 def delete(bucket_name, object_name):
