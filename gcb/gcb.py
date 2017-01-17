@@ -11,15 +11,14 @@ from cli.ceph import bucket as clicephbucket
 from cli.ceph import object as clicephobject
 
 
-def progress(count, total):
-    bar_len = 60
+def progress(count, total, file_name, file_size):
+    bar_len = 40
     filled_len = int(round(bar_len * count / float(total)))
     percents = round(100.0 * count / float(total), 1)
     bar = '#' * filled_len + ' ' * (bar_len - filled_len)
-    sys.stdout.write('[%s] %s%s ... %s/%s\r' % (bar, percents, '%', count, total))
+    sys.stdout.write('[%s] %s%s ... %s\t%s%s%s\0\r' % (bar, percents, '%', file_name, '(', file_size, ')'))
     sys.stdout.flush()
-    if count == total:
-        print '\n[GCB] Backup finish'
+    if count == total: print ""
 
 
 def bucket_backup(ceph_bucket, gcp_project, gcp_bucket):
@@ -29,21 +28,17 @@ def bucket_backup(ceph_bucket, gcp_project, gcp_bucket):
         if 'items' in gcpbuckets.keys():
             if bool([(value['name']) for value in gcpbuckets['items'] if gcp_bucket == value['name']]):
                 ceph_objects = cephobject.list(ceph_bucket)
-                # objects_count = sum(1 for key in ceph_objects)
-                # index = 1
                 for key in ceph_objects:
                     cephobject.download(ceph_bucket, key.name)
                     gcp_object = gcpobject.upload(gcp_bucket, key.name, key.name)
                     done = None
+                    progress(0, 100, key.name, key.size)
                     while done is None:
                         status, done = gcp_object.next_chunk()
                         if status:
-                            sys.stdout.write("Uploaded %d%%.\r" % int(status.progress() * 100))
-                            sys.stdout.flush()
+                            progress(int(status.progress() * 100), 100, key.name, key.size)
                     os.remove(key.name)
-                    print "%s upload complete" % key.name
-                    # progress(index, objects_count)
-                    # index += 1
+                    progress(100, 100, key.name, key.size)
             else:
                 print "[GCB] %s not in your GCP" % gcp_bucket
     else:
