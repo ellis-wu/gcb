@@ -1,5 +1,7 @@
 import os
 import sys
+from threading import Thread
+from Queue import Queue
 from gcp import bucket as gcpbucket
 from gcp import object as gcpobject
 from cli.gcp import project as cligcpproject
@@ -11,34 +13,44 @@ from cli.ceph import bucket as clicephbucket
 from cli.ceph import object as clicephobject
 
 
-def progress(count, total, file_name, file_size):
-    bar_len = 40
-    filled_len = int(round(bar_len * count / float(total)))
-    percents = round(100.0 * count / float(total), 1)
-    bar = '#' * filled_len + ' ' * (bar_len - filled_len)
-    sys.stdout.write('[%s] %s%s ... %s\t%s%s%s\0\r' % (bar, percents, '%', file_name, '(', file_size, ')'))
+def progress(percent, file_name):
+    bar_len = 30
+    print "[%s] %d%% ... %s\r" % (('%%-%ds' % bar_len) % (bar_len * percent / 100 * '#'), percent, file_name),
+    if percent >= 100:
+        print ""
     sys.stdout.flush()
-    if count == total: print ""
+
+
+def thread_worker(ceph_bucket, gcp_bucket, que):
+    while not que.empty():
+        key = que.get()
+        cephobject.download(ceph_bucket, key.name)
+        gcp_object = gcpobject.upload(gcp_bucket, key.name, key.name)
+        done = None
+        progress(0, key.name)
+        while done is None:
+            status, done = gcp_object.next_chunk()
+            if status:
+                progress(int(status.progress() * 100), key.name)
+        os.remove(key.name)
+        progress(100, key.name)
 
 
 def bucket_backup(ceph_bucket, gcp_project, gcp_bucket):
+    NUM_THREADS = 2
     cephbuckets = cephbucket.list()
     if bool([(bucket.name) for bucket in cephbuckets if ceph_bucket == bucket.name]):
         gcpbuckets = gcpbucket.list(gcp_project)
         if 'items' in gcpbuckets.keys():
             if bool([(value['name']) for value in gcpbuckets['items'] if gcp_bucket == value['name']]):
+                queue = Queue()
                 ceph_objects = cephobject.list(ceph_bucket)
                 for key in ceph_objects:
-                    cephobject.download(ceph_bucket, key.name)
-                    gcp_object = gcpobject.upload(gcp_bucket, key.name, key.name)
-                    done = None
-                    progress(0, 100, key.name, key.size)
-                    while done is None:
-                        status, done = gcp_object.next_chunk()
-                        if status:
-                            progress(int(status.progress() * 100), 100, key.name, key.size)
-                    os.remove(key.name)
-                    progress(100, 100, key.name, key.size)
+                    queue.put(key)
+                # thread
+                threads = map(lambda i: Thread(target=thread_worker, args=(ceph_bucket, gcp_bucket, queue)), xrange(NUM_THREADS))
+                map(lambda th: th.start(), threads)
+                map(lambda th: th.join(), threads)
             else:
                 print "[GCB] %s not in your GCP" % gcp_bucket
     else:
